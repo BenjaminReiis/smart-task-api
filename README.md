@@ -147,6 +147,6 @@ Este projeto foi desenvolvido como parte de estudos em **desenvolvimento backend
 
 # 👨‍💻 Autor
 
-Yasmin Reis
+Benjamin Reis
 
 Desenvolvedor focado em backend, APIs e engenharia de software.

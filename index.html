@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Task AI — Demo do Calendário Inteligente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0C14;
+    --bg-raised: #11131D;
+    --bg-panel: #151826;
+    --ink: #E8E6F0;
+    --ink-dim: #8C90A6;
+    --line: #242838;
+    --ai: #8B7FFF;
+    --ai-dim: rgba(139,127,255,0.16);
+    --done: #3DDC84;
+    --done-dim: rgba(61,220,132,0.16);
+    --today: #FFB23D;
+    --today-dim: rgba(255,178,61,0.16);
+    --late: #FF5C5C;
+    --late-dim: rgba(255,92,92,0.16);
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height:1.6;
+    overflow-x:hidden;
+    min-height:100vh;
+  }
+  body::before{
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 56px 56px;
+    opacity:0.18;
+    pointer-events:none;
+    z-index:0;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 28px; position:relative; z-index:1; }
+  a{ color:var(--ai); text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+  ::selection{ background:var(--ai); color:#0B0C14; }
+  button{ font-family:inherit; }
+
+  /* ===== NAV ===== */
+  nav{
+    position:sticky; top:0; z-index:60;
+    backdrop-filter: blur(10px);
+    background: rgba(11,12,20,0.8);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{ display:flex; align-items:center; justify-content:space-between; height:62px; }
+  .nav-brand{ font-family:var(--font-display); font-weight:700; font-size:1.02rem; display:flex; align-items:center; gap:9px; }
+  .nav-brand .spark{ color:var(--ai); font-size:1.1rem; }
+  .nav-links{ display:flex; gap:8px; align-items:center; }
+  .src-pill{
+    font-family:var(--font-mono); font-size:0.74rem;
+    color:var(--ink-dim);
+    padding:6px 12px;
+    border:1px solid var(--line);
+    border-radius:20px;
+  }
+  .src-pill a{ color:var(--ink-dim); }
+  .src-pill a:hover{ color:var(--ink); text-decoration:none; }
+
+  /* ===== HERO ===== */
+  .hero{ padding:56px 0 36px; text-align:center; }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:0.76rem; color:var(--ai);
+    letter-spacing:0.08em; text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:8px; margin-bottom:18px;
+  }
+  .eyebrow::before{ content:''; width:6px; height:6px; background:var(--ai); border-radius:50%; box-shadow:0 0 8px var(--ai); }
+  h1{
+    font-family:var(--font-display); font-weight:700;
+    font-size: clamp(1.9rem, 4.2vw, 2.8rem);
+    letter-spacing:-0.02em; line-height:1.12;
+    margin-bottom:14px;
+  }
+  h1 .accent{ color:var(--ai); }
+  .hero p.lead{ color:var(--ink-dim); font-size:1rem; max-width:560px; margin:0 auto; }
+
+  /* ===== AI INPUT BAR ===== */
+  .ai-input-section{ padding: 8px 0 40px; }
+  .ai-bar{
+    display:flex; gap:10px;
+    background: var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:8px 8px 8px 18px;
+    align-items:center;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .ai-bar:focus-within{ border-color: var(--ai); box-shadow: 0 0 0 3px var(--ai-dim); }
+  .ai-bar .spark-icon{ color:var(--ai); flex-shrink:0; font-size:1.05rem; }
+  .ai-bar input{
+    flex:1; background:transparent; border:none; outline:none;
+    color:var(--ink); font-family:var(--font-body); font-size:0.96rem;
+    padding:12px 0;
+  }
+  .ai-bar input::placeholder{ color:var(--ink-dim); }
+  .ai-bar button{
+    background: var(--ai); color:#0B0C14;
+    border:none; border-radius:9px;
+    padding:11px 20px;
+    font-weight:600; font-size:0.88rem;
+    cursor:pointer;
+    display:flex; align-items:center; gap:8px;
+    transition: background 0.15s ease;
+    flex-shrink:0;
+  }
+  .ai-bar button:hover{ background:#A398FF; }
+  .ai-bar button:disabled{ opacity:0.5; cursor:default; }
+
+  .ai-hints{
+    display:flex; gap:8px; flex-wrap:wrap;
+    margin-top:14px;
+  }
+  .ai-hint{
+    font-family:var(--font-mono); font-size:0.76rem;
+    color:var(--ink-dim);
+    border:1px solid var(--line);
+    background:var(--bg-raised);
+    padding:6px 12px;
+    border-radius:20px;
+    cursor:pointer;
+    transition: all 0.15s ease;
+  }
+  .ai-hint:hover{ color:var(--ink); border-color:var(--ai); }
+
+  .ai-parse-result{
+    margin-top:16px;
+    padding:14px 18px;
+    border-radius:10px;
+    background: var(--ai-dim);
+    border:1px solid rgba(139,127,255,0.3);
+    font-size:0.86rem;
+    color:var(--ink);
+    display:none;
+    align-items:center;
+    gap:10px;
+  }
+  .ai-parse-result.visible{ display:flex; animation: fadeSlide 0.3s ease; }
+  @keyframes fadeSlide{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+  .ai-parse-result .check{ color:var(--done); font-weight:700; }
+  .ai-parse-result b{ color:var(--ai); }
+
+  /* ===== MAIN GRID: calendar + day panel ===== */
+  .main-grid{
+    display:grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap:24px;
+    padding-bottom:56px;
+  }
+  @media (max-width:860px){ .main-grid{ grid-template-columns:1fr; } }
+
+  /* ===== CALENDAR ===== */
+  .cal-card{
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--bg-panel);
+    overflow:hidden;
+  }
+  .cal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .cal-head h2{
+    font-family:var(--font-display); font-size:1.1rem; font-weight:600;
+    text-transform:capitalize;
+  }
+  .cal-nav{ display:flex; gap:8px; }
+  .cal-nav button{
+    width:32px; height:32px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--bg-raised);
+    color:var(--ink);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.9rem;
+    transition: background 0.15s ease;
+  }
+  .cal-nav button:hover{ background: var(--ai-dim); border-color: var(--ai); }
+  .cal-nav .today-btn{
+    width:auto; padding:0 12px;
+    font-family:var(--font-mono); font-size:0.74rem;
+  }
+
+  .cal-weekdays{
+    display:grid; grid-template-columns: repeat(7,1fr);
+    padding: 12px 12px 0;
+    font-family:var(--font-mono); font-size:0.7rem;
+    color:var(--ink-dim); text-align:center;
+    text-transform:uppercase;
+  }
+  .cal-grid{
+    display:grid; grid-template-columns: repeat(7,1fr);
+    gap:6px;
+    padding: 10px 12px 16px;
+  }
+  .cal-day{
+    aspect-ratio: 1;
+    border-radius:10px;
+    border:1px solid transparent;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    padding:7px 4px 4px;
+    cursor:pointer;
+    position:relative;
+    transition: all 0.15s ease;
+    background: var(--bg-raised);
+  }
+  .cal-day:hover{ border-color: var(--ai); }
+  .cal-day.empty{ visibility:hidden; cursor:default; }
+  .cal-day .day-num{ font-family:var(--font-mono); font-size:0.84rem; color:var(--ink); }
+  .cal-day.is-today{ background: var(--today-dim); }
+  .cal-day.is-today .day-num{ color:var(--today); font-weight:600; }
+  .cal-day.is-selected{ border-color: var(--ai); background: var(--ai-dim); }
+  .cal-day .dots{ display:flex; gap:3px; margin-top:5px; flex-wrap:wrap; justify-content:center; }
+  .cal-day .dots span{ width:5px; height:5px; border-radius:50%; }
+  .dot-normal{ background: var(--ai); }
+  .dot-high{ background: var(--late); }
+  .dot-low{ background: var(--ink-dim); }
+  .dot-done{ background: var(--done); }
+
+  /* ===== DAY PANEL ===== */
+  .day-card{
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--bg-panel);
+    display:flex; flex-direction:column;
+    max-height: 540px;
+  }
+  .day-head{
+    padding:18px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .day-head .dh-label{ font-family:var(--font-mono); font-size:0.72rem; color:var(--ink-dim); margin-bottom:4px; }
+  .day-head h3{ font-family:var(--font-display); font-size:1.05rem; text-transform:capitalize; }
+
+  .day-tasks{
+    flex:1; overflow-y:auto;
+    padding: 8px 10px;
+  }
+  .day-tasks::-webkit-scrollbar{ width:6px; }
+  .day-tasks::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+
+  .task-item{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:12px 10px;
+    border-radius:10px;
+    transition: background 0.15s ease;
+  }
+  .task-item:hover{ background: var(--bg-raised); }
+  .task-item.done .task-title{ color:var(--ink-dim); text-decoration:line-through; }
+
+  .task-check{
+    width:20px; height:20px; border-radius:6px;
+    border:1.5px solid var(--line);
+    flex-shrink:0; margin-top:1px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.7rem;
+    transition: all 0.15s ease;
+    background:transparent;
+    color:transparent;
+  }
+  .task-check.checked{ background:var(--done); border-color:var(--done); color:#0B0C14; }
+
+  .task-body{ flex:1; min-width:0; }
+  .task-title{ font-size:0.92rem; color:var(--ink); margin-bottom:2px; word-break:break-word; }
+  .task-meta{ display:flex; gap:8px; align-items:center; font-family:var(--font-mono); font-size:0.72rem; color:var(--ink-dim); }
+  .priority-badge{ padding:1px 7px; border-radius:4px; font-size:0.68rem; }
+  .priority-high{ background:var(--late-dim); color:var(--late); }
+  .priority-low{ background: rgba(255,255,255,0.06); color:var(--ink-dim); }
+
+  .task-del{
+    background:none; border:none; color:var(--ink-dim);
+    cursor:pointer; font-size:0.85rem; padding:2px 6px;
+    border-radius:6px; flex-shrink:0;
+    opacity:0; transition: opacity 0.15s ease;
+  }
+  .task-item:hover .task-del{ opacity:1; }
+  .task-del:hover{ color:var(--late); background: var(--late-dim); }
+
+  .day-empty{
+    padding:40px 20px;
+    text-align:center;
+    color:var(--ink-dim);
+    font-size:0.88rem;
+  }
+  .day-empty .big-icon{ font-size:1.8rem; display:block; margin-bottom:10px; opacity:0.5; }
+
+  .day-foot{
+    padding:12px 20px;
+    border-top:1px solid var(--line);
+    font-family:var(--font-mono); font-size:0.74rem;
+    color:var(--ink-dim);
+    display:flex; justify-content:space-between;
+  }
+
+  /* ===== AI CONFIG PANEL (collapsible) ===== */
+  .config-section{ padding-bottom:64px; }
+  .config-toggle{
+    display:flex; align-items:center; gap:10px;
+    background:none; border:1px solid var(--line);
+    border-radius:10px;
+    padding:13px 18px;
+    color:var(--ink-dim);
+    font-family:var(--font-mono); font-size:0.82rem;
+    cursor:pointer;
+    width:100%;
+    text-align:left;
+    transition: all 0.15s ease;
+  }
+  .config-toggle:hover{ border-color:var(--ai); color:var(--ink); }
+  .config-toggle .chev{ margin-left:auto; transition: transform 0.2s ease; }
+  .config-toggle.open .chev{ transform: rotate(180deg); }
+
+  .config-panel{
+    display:none;
+    margin-top:12px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:var(--bg-panel);
+    padding:24px 26px;
+  }
+  .config-panel.open{ display:block; animation: fadeSlide 0.25s ease; }
+  .config-panel h4{ font-family:var(--font-display); font-size:0.98rem; margin-bottom:8px; }
+  .config-panel p.desc{ font-size:0.85rem; color:var(--ink-dim); margin-bottom:18px; line-height:1.6; }
+
+  .mode-switch{ display:flex; gap:10px; margin-bottom:20px; }
+  .mode-btn{
+    flex:1; padding:11px; border-radius:9px;
+    border:1px solid var(--line); background:var(--bg-raised);
+    color:var(--ink-dim); cursor:pointer;
+    font-family:var(--font-mono); font-size:0.8rem;
+    transition: all 0.15s ease;
+  }
+  .mode-btn.active{ border-color:var(--ai); background:var(--ai-dim); color:var(--ai); font-weight:600; }
+
+  .config-field{ margin-bottom:14px; }
+  .config-field label{ display:block; font-family:var(--font-mono); font-size:0.74rem; color:var(--ink-dim); margin-bottom:6px; }
+  .config-field input{
+    width:100%; background:var(--bg-raised); border:1px solid var(--line);
+    border-radius:8px; padding:10px 12px; color:var(--ink);
+    font-family:var(--font-mono); font-size:0.84rem;
+    outline:none;
+  }
+  .config-field input:focus{ border-color:var(--ai); }
+  .config-note{
+    font-size:0.78rem; color:var(--ink-dim);
+    padding:11px 14px; border-radius:8px;
+    background:var(--bg-raised); border-left:2px solid var(--ai);
+    margin-top:6px;
+  }
+  .config-save{
+    margin-top:10px;
+    background:var(--ai); color:#0B0C14; border:none;
+    padding:10px 18px; border-radius:8px;
+    font-weight:600; font-size:0.84rem; cursor:pointer;
+  }
+  .config-save:hover{ background:#A398FF; }
+
+  footer{ padding:40px 0 56px; border-top:1px solid var(--line); text-align:center; }
+  footer p{ color:var(--ink-dim); font-size:0.82rem; font-family:var(--font-mono); }
+  footer .footer-dots{ display:flex; gap:6px; justify-content:center; margin-bottom:16px; }
+  footer .footer-dots span{ width:6px; height:6px; border-radius:50%; }
+  footer .footer-dots span:nth-child(1){ background:var(--ai); }
+  footer .footer-dots span:nth-child(2){ background:var(--today); }
+  footer .footer-dots span:nth-child(3){ background:var(--done); }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--bg-panel); border:1px solid var(--line);
+    color:var(--ink); padding:12px 20px; border-radius:10px;
+    font-size:0.86rem; z-index:100;
+    opacity:0; pointer-events:none;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.visible{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+  a:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--ai); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="nav-brand"><span class="spark">✦</span>Smart Task AI</div>
+    <div class="nav-links">
+      <span class="src-pill">demo de <a href="#" id="apiLinkRef">api-de-tarefas-inteligentes</a></span>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">demo interativa</span>
+    <h1>Escreva a tarefa como você fala.<br>A <span class="accent">IA</span> organiza no calendário.</h1>
+    <p class="lead">Digite algo como "reunião amanhã às 15h" ou "comprar pão sexta urgente" — a tarefa aparece automaticamente no dia certo, com o horário e a prioridade já identificados.</p>
+  </div>
+</header>
+
+<section class="ai-input-section">
+  <div class="wrap">
+    <div class="ai-bar">
+      <span class="spark-icon">✦</span>
+      <input type="text" id="taskInput" placeholder="ex: ligar pro dentista amanhã às 10h urgente" autocomplete="off" />
+      <button id="addTaskBtn">Adicionar</button>
+    </div>
+    <div class="ai-hints">
+      <span class="ai-hint" data-text="reunião com o time amanhã às 15h">reunião com o time amanhã às 15h</span>
+      <span class="ai-hint" data-text="comprar pão sexta">comprar pão sexta</span>
+      <span class="ai-hint" data-text="entregar relatório dia 30 urgente">entregar relatório dia 30 urgente</span>
+      <span class="ai-hint" data-text="academia quando der">academia quando der</span>
+    </div>
+    <div class="ai-parse-result" id="parseResult">
+      <span class="check">✓</span>
+      <span id="parseResultText"></span>
+    </div>
+  </div>
+</section>
+
+<section class="main-grid wrap">
+  <div class="cal-card">
+    <div class="cal-head">
+      <h2 id="calMonthLabel"></h2>
+      <div class="cal-nav">
+        <button id="prevMonth" aria-label="Mês anterior">‹</button>
+        <button class="today-btn" id="gotoToday">hoje</button>
+        <button id="nextMonth" aria-label="Próximo mês">›</button>
+      </div>
+    </div>
+    <div class="cal-weekdays">
+      <span>dom</span><span>seg</span><span>ter</span><span>qua</span><span>qui</span><span>sex</span><span>sáb</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="day-card">
+    <div class="day-head">
+      <div class="dh-label" id="dayLabelSmall">tarefas de</div>
+      <h3 id="dayLabel"></h3>
+    </div>
+    <div class="day-tasks" id="dayTasks"></div>
+    <div class="day-foot">
+      <span id="dayTaskCount">0 tarefas</span>
+      <span id="dayDoneCount">0 concluídas</span>
+    </div>
+  </div>
+</section>
+
+<section class="config-section wrap">
+  <button class="config-toggle" id="configToggle">
+    <span>⚙</span>
+    <span>Configurar IA real (opcional) — por padrão, a interpretação é feita localmente, sem custo</span>
+    <span class="chev">▾</span>
+  </button>
+  <div class="config-panel" id="configPanel">
+    <h4>Motor de interpretação de linguagem natural</h4>
+    <p class="desc">
+      Por padrão, esta demo usa um interpretador local (roda no seu navegador, sem custo e sem enviar dados a lugar nenhum)
+      que reconhece datas relativas, dias da semana, horários e prioridade em português.
+      Se quiser respostas mais flexíveis para frases complexas, você pode plugar uma API de IA real — a chave fica
+      apenas na memória desta aba e nunca é salva ou enviada para qualquer lugar além da API que você configurar.
+    </p>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" id="modeLocal">Interpretador local</button>
+      <button class="mode-btn" id="modeApi">API externa</button>
+    </div>
+
+    <div id="apiFields" style="display:none;">
+      <div class="config-field">
+        <label>Endpoint da API (compatível com Anthropic Messages API)</label>
+        <input type="text" id="apiEndpoint" placeholder="https://api.anthropic.com/v1/messages" />
+      </div>
+      <div class="config-field">
+        <label>Chave de API</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-..." />
+      </div>
+      <div class="config-note">
+        A chave é mantida apenas na memória desta página enquanto a aba estiver aberta. Ao fechar ou recarregar, ela é descartada.
+        Chamadas diretas do navegador a <code>api.anthropic.com</code> normalmente são bloqueadas por CORS — para uso real,
+        rotear essa chamada por um backend próprio é o caminho recomendado.
+      </div>
+      <button class="config-save" id="saveApiConfig">Usar este endpoint</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-dots"><span></span><span></span><span></span></div>
+    <p>Smart Task AI · demo do calendário inteligente · interpretador local em JavaScript</p>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============================================================
+  // 1. NLP PARSER (PT-BR) — validated offline against test cases
+  // ============================================================
+  const WEEKDAYS_FULL = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  const WEEKDAY_ALIASES = { 'domingo':0,'segunda':1,'terca':2,'quarta':3,'quinta':4,'sexta':5,'sabado':6 };
+  const MONTHS = { 'janeiro':0,'fevereiro':1,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11 };
+  const MONTHS_FULL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  function stripAccents(s){ return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+  function parseTaskText(text, now){
+    now = now || new Date();
+    const original = text.trim();
+    const normalized = stripAccents(original.toLowerCase());
+
+    const spansToRemove = [];
+    let date = null, time = null, priority = 'normal', m;
+
+    function findAndMark(re){
+      const mm = normalized.match(re);
+      if(!mm) return null;
+      spansToRemove.push({ start: mm.index, end: mm.index + mm[0].length });
+      return mm;
+    }
+
+    if(m = findAndMark(/\bdepois de amanha\b/)){ date = new Date(now); date.setDate(date.getDate()+2); }
+    else if(m = findAndMark(/\bamanha\b/)){ date = new Date(now); date.setDate(date.getDate()+1); }
+    else if(m = findAndMark(/\bhoje\b/)){ date = new Date(now); }
+
+    if(!date && (m = findAndMark(/\bproxima semana\b/))){ date = new Date(now); date.setDate(date.getDate()+7); }
+
+    if(!date){
+      for(const key in WEEKDAY_ALIASES){
+        const idx = WEEKDAY_ALIASES[key];
+        const re = new RegExp('\\b(proxima\\s+)?(na\\s+|nesta\\s+|neste\\s+)?' + key + '(-feira)?\\b');
+        const mm = normalized.match(re);
+        if(mm){
+          const d = new Date(now);
+          const currentDow = d.getDay();
+          let diff = (idx - currentDow + 7) % 7;
+          if(diff === 0) diff = 7;
+          d.setDate(d.getDate() + diff);
+          date = d;
+          spansToRemove.push({ start: mm.index, end: mm.index + mm[0].length });
+          break;
+        }
+      }
+    }
+
+    if(!date){
+      const re = /\bdia\s+(\d{1,2})(\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro))?\b/;
+      if(m = findAndMark(re)){
+        const day = parseInt(m[1], 10);
+        const d = new Date(now);
+        if(m[3]){
+          d.setMonth(MONTHS[m[3]], day);
+        } else {
+          const currentMonth = d.getMonth();
+          d.setDate(1);
+          d.setMonth(currentMonth, day);
+          if(d < now) d.setMonth(d.getMonth()+1, day);
+        }
+        date = d;
+      }
+    }
+
+    if(!date){
+      const re = /\b(\d{1,2})\/(\d{1,2})(\/(\d{2,4}))?\b/;
+      if(m = findAndMark(re)){
+        const d = new Date(now);
+        const day = parseInt(m[1],10);
+        const month = parseInt(m[2],10)-1;
+        if(m[4]){
+          let year = parseInt(m[4],10);
+          if(year < 100) year += 2000;
+          d.setFullYear(year);
+        }
+        d.setMonth(month, day);
+        date = d;
+      }
+    }
+
+    {
+      const re = /\b(as\s+)?(\d{1,2})[h:](\d{2})?\b/;
+      if(m = findAndMark(re)){
+        const h = parseInt(m[2],10);
+        const min = m[3] ? parseInt(m[3],10) : 0;
+        if(h >= 0 && h <= 23) time = { hour: h, minute: min };
+        else spansToRemove.pop();
+      }
+    }
+    if(!time){
+      const re = /\bas\s+(\d{1,2})\b/;
+      if(m = findAndMark(re)){
+        const h = parseInt(m[1],10);
+        if(h >= 0 && h <= 23) time = { hour:h, minute:0 };
+        else spansToRemove.pop();
+      }
+    }
+
+    if(m = findAndMark(/\b(urgente|importante|prioridade alta)\b/)){ priority = 'high'; }
+    else if(m = findAndMark(/\b(quando der|sem pressa|baixa prioridade)\b/)){ priority = 'low'; }
+
+    spansToRemove.sort((a,b) => b.start - a.start);
+    let cleaned = original;
+    for(const span of spansToRemove){ cleaned = cleaned.slice(0, span.start) + cleaned.slice(span.end); }
+    cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+    cleaned = cleaned.replace(/^[\s:;,\-–]+/, '').trim();
+    cleaned = cleaned.replace(/[\s:;,\-–]+$/, '').trim();
+    cleaned = cleaned.replace(/^(em|no|na|nas|nos|para|pra|de|às|as)\s+/i, '').trim();
+    cleaned = cleaned.replace(/\s+(em|no|na|para|pra|de)$/i, '').trim();
+    cleaned = cleaned.replace(/^[\s:;,\-–]+/, '').trim();
+    if(!cleaned) cleaned = original.trim() || 'Tarefa sem título';
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+
+    if(!date) date = new Date(now);
+    date.setHours(time ? time.hour : 9, time ? time.minute : 0, 0, 0);
+
+    return { title: cleaned, date, time, priority };
+  }
+
+  // ============================================================
+  // 2. STATE & PERSISTENCE (localStorage — safe here: standalone
+  //    downloadable HTML file opened directly in the browser, not
+  //    a claude.ai artifact iframe)
+  // ============================================================
+  const STORAGE_KEY = 'smart-task-ai-demo-tasks-v1';
+  let tasks = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) tasks = JSON.parse(raw).map(t => ({ ...t, date: t.date }));
+  } catch(e){ tasks = []; }
+
+  function persist(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch(e){ /* storage unavailable, fail silently */ }
+  }
+
+  function dateKey(d){
+    const dt = (d instanceof Date) ? d : new Date(d);
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  }
+
+  function seedIfEmpty(){
+    if(tasks.length > 0) return;
+    const now = new Date();
+    const seed = [
+      { text: 'explorar a demo do calendário', offsetDays: 0, hour:9, priority:'normal' },
+      { text: 'testar uma frase com data e hora', offsetDays: 1, hour:15, priority:'normal' },
+    ];
+    seed.forEach(s => {
+      const d = new Date(now);
+      d.setDate(d.getDate() + s.offsetDays);
+      d.setHours(s.hour, 0, 0, 0);
+      tasks.push({
+        id: 'seed-' + Math.random().toString(36).slice(2),
+        title: s.text.charAt(0).toUpperCase() + s.text.slice(1),
+        date: d.toISOString(),
+        priority: s.priority,
+        done: false
+      });
+    });
+    persist();
+  }
+  seedIfEmpty();
+
+  // ============================================================
+  // 3. CALENDAR RENDERING
+  // ============================================================
+  let viewDate = new Date(); // month currently displayed
+  let selectedDate = new Date(); // day selected in the side panel
+  viewDate.setDate(1);
+
+  const calGrid = document.getElementById('calGrid');
+  const calMonthLabel = document.getElementById('calMonthLabel');
+  const dayLabel = document.getElementById('dayLabel');
+  const dayTasksEl = document.getElementById('dayTasks');
+  const dayTaskCount = document.getElementById('dayTaskCount');
+  const dayDoneCount = document.getElementById('dayDoneCount');
+
+  function tasksForDate(d){
+    const key = dateKey(d);
+    return tasks.filter(t => dateKey(t.date) === key).sort((a,b) => new Date(a.date) - new Date(b.date));
+  }
+
+  function renderCalendar(){
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    calMonthLabel.textContent = MONTHS_FULL[month] + ' de ' + year;
+
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const today = new Date();
+    const todayKey = dateKey(today);
+    const selectedKey = dateKey(selectedDate);
+
+    calGrid.innerHTML = '';
+    for(let i=0; i<firstDow; i++){
+      const empty = document.createElement('div');
+      empty.className = 'cal-day empty';
+      calGrid.appendChild(empty);
+    }
+
+    for(let day=1; day<=daysInMonth; day++){
+      const cellDate = new Date(year, month, day);
+      const key = dateKey(cellDate);
+      const cell = document.createElement('div');
+      cell.className = 'cal-day';
+      if(key === todayKey) cell.classList.add('is-today');
+      if(key === selectedKey) cell.classList.add('is-selected');
+
+      const num = document.createElement('div');
+      num.className = 'day-num';
+      num.textContent = day;
+      cell.appendChild(num);
+
+      const dayTasks = tasksForDate(cellDate);
+      if(dayTasks.length > 0){
+        const dots = document.createElement('div');
+        dots.className = 'dots';
+        dayTasks.slice(0,4).forEach(t => {
+          const dot = document.createElement('span');
+          dot.className = t.done ? 'dot-done' : (t.priority === 'high' ? 'dot-high' : t.priority === 'low' ? 'dot-low' : 'dot-normal');
+          dots.appendChild(dot);
+        });
+        cell.appendChild(dots);
+      }
+
+      cell.addEventListener('click', () => {
+        selectedDate = cellDate;
+        renderCalendar();
+        renderDayPanel();
+      });
+
+      calGrid.appendChild(cell);
+    }
+  }
+
+  function renderDayPanel(){
+    const dayTasksList = tasksForDate(selectedDate);
+    const today = new Date();
+    const isToday = dateKey(selectedDate) === dateKey(today);
+
+    const weekday = WEEKDAYS_FULL[selectedDate.getDay()];
+    const dateStr = selectedDate.getDate() + ' de ' + MONTHS_FULL[selectedDate.getMonth()];
+    dayLabel.textContent = (isToday ? 'hoje · ' : '') + weekday + ', ' + dateStr;
+
+    dayTasksEl.innerHTML = '';
+    if(dayTasksList.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'day-empty';
+      empty.innerHTML = '<span class="big-icon">○</span>Nenhuma tarefa neste dia.<br>Adicione uma usando a barra acima.';
+      dayTasksEl.appendChild(empty);
+    } else {
+      dayTasksList.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'task-item' + (t.done ? ' done' : '');
+
+        const check = document.createElement('button');
+        check.className = 'task-check' + (t.done ? ' checked' : '');
+        check.textContent = t.done ? '✓' : '';
+        check.setAttribute('aria-label', t.done ? 'Marcar como pendente' : 'Marcar como concluída');
+        check.addEventListener('click', () => {
+          t.done = !t.done;
+          persist();
+          renderDayPanel();
+          renderCalendar();
+        });
+
+        const body = document.createElement('div');
+        body.className = 'task-body';
+        const title = document.createElement('div');
+        title.className = 'task-title';
+        title.textContent = t.title;
+        const meta = document.createElement('div');
+        meta.className = 'task-meta';
+        const time = new Date(t.date);
+        const timeStr = String(time.getHours()).padStart(2,'0') + ':' + String(time.getMinutes()).padStart(2,'0');
+        meta.innerHTML = '<span>' + timeStr + '</span>';
+        if(t.priority === 'high'){
+          meta.innerHTML += '<span class="priority-badge priority-high">urgente</span>';
+        } else if(t.priority === 'low'){
+          meta.innerHTML += '<span class="priority-badge priority-low">sem pressa</span>';
+        }
+        body.appendChild(title);
+        body.appendChild(meta);
+
+        const del = document.createElement('button');
+        del.className = 'task-del';
+        del.textContent = '✕';
+        del.setAttribute('aria-label', 'Remover tarefa');
+        del.addEventListener('click', () => {
+          tasks = tasks.filter(x => x.id !== t.id);
+          persist();
+          renderDayPanel();
+          renderCalendar();
+        });
+
+        item.appendChild(check);
+        item.appendChild(body);
+        item.appendChild(del);
+        dayTasksEl.appendChild(item);
+      });
+    }
+
+    const total = dayTasksList.length;
+    const done = dayTasksList.filter(t => t.done).length;
+    dayTaskCount.textContent = total + (total === 1 ? ' tarefa' : ' tarefas');
+    dayDoneCount.textContent = done + (done === 1 ? ' concluída' : ' concluídas');
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    viewDate.setMonth(viewDate.getMonth()-1);
+    renderCalendar();
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    viewDate.setMonth(viewDate.getMonth()+1);
+    renderCalendar();
+  });
+  document.getElementById('gotoToday').addEventListener('click', () => {
+    viewDate = new Date(); viewDate.setDate(1);
+    selectedDate = new Date();
+    renderCalendar();
+    renderDayPanel();
+  });
+
+  // ============================================================
+  // 4. TASK INPUT — local parser by default, optional external API
+  // ============================================================
+  const taskInput = document.getElementById('taskInput');
+  const addTaskBtn = document.getElementById('addTaskBtn');
+  const parseResult = document.getElementById('parseResult');
+  const parseResultText = document.getElementById('parseResultText');
+  const toast = document.getElementById('toast');
+
+  let aiMode = 'local'; // 'local' | 'api'
+  let apiConfig = { endpoint: '', key: '' };
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('visible');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('visible'), 2400);
+  }
+
+  function showParseResult(parsed){
+    const weekday = WEEKDAYS_FULL[parsed.date.getDay()];
+    const dd = String(parsed.date.getDate()).padStart(2,'0');
+    const mm = String(parsed.date.getMonth()+1).padStart(2,'0');
+    const hh = String(parsed.date.getHours()).padStart(2,'0');
+    const mi = String(parsed.date.getMinutes()).padStart(2,'0');
+    const prLabel = parsed.priority === 'high' ? ' · prioridade alta' : parsed.priority === 'low' ? ' · sem pressa' : '';
+    parseResultText.innerHTML = 'Entendi: <b>' + parsed.title + '</b> — ' + weekday + ', ' + dd + '/' + mm + ' às ' + hh + ':' + mi + prLabel;
+    parseResult.classList.add('visible');
+    clearTimeout(showParseResult._t);
+    showParseResult._t = setTimeout(() => parseResult.classList.remove('visible'), 4500);
+  }
+
+  function addTask(parsed){
+    tasks.push({
+      id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+      title: parsed.title,
+      date: parsed.date.toISOString(),
+      priority: parsed.priority,
+      done: false
+    });
+    persist();
+    selectedDate = new Date(parsed.date);
+    viewDate = new Date(parsed.date); viewDate.setDate(1);
+    renderCalendar();
+    renderDayPanel();
+    showParseResult(parsed);
+  }
+
+  async function handleSubmit(){
+    const text = taskInput.value.trim();
+    if(!text) return;
+    addTaskBtn.disabled = true;
+    const originalLabel = addTaskBtn.textContent;
+
+    if(aiMode === 'local' || !apiConfig.endpoint || !apiConfig.key){
+      const parsed = parseTaskText(text, new Date());
+      addTask(parsed);
+      taskInput.value = '';
+      addTaskBtn.disabled = false;
+      return;
+    }
+
+    // optional external API mode
+    addTaskBtn.textContent = 'pensando…';
+    try {
+      const now = new Date();
+      const systemPrompt = 'Você extrai dados de tarefas a partir de texto livre em português. ' +
+        'Responda APENAS com um JSON válido no formato {"title": string, "date": "AAAA-MM-DDTHH:mm:ss", "priority": "low"|"normal"|"high"}. ' +
+        'A data de referência (hoje) é ' + now.toISOString() + '. Não inclua nenhum texto fora do JSON.';
+
+      const resp = await fetch(apiConfig.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiConfig.key,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: text }]
+        })
+      });
+
+      if(!resp.ok) throw new Error('Falha na chamada à API (status ' + resp.status + ')');
+      const data = await resp.json();
+      const rawText = (data.content || []).map(b => b.text || '').join('').trim();
+      const cleanJson = rawText.replace(/```json|```/g, '').trim();
+      const parsedJson = JSON.parse(cleanJson);
+
+      addTask({
+        title: parsedJson.title || text,
+        date: new Date(parsedJson.date),
+        priority: parsedJson.priority || 'normal'
+      });
+      taskInput.value = '';
+    } catch(err){
+      showToast('Não consegui usar a API externa (' + err.message + '). Usando o interpretador local.');
+      const parsed = parseTaskText(text, new Date());
+      addTask(parsed);
+      taskInput.value = '';
+    } finally {
+      addTaskBtn.disabled = false;
+      addTaskBtn.textContent = originalLabel;
+    }
+  }
+
+  addTaskBtn.addEventListener('click', handleSubmit);
+  taskInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') handleSubmit();
+  });
+
+  document.querySelectorAll('.ai-hint').forEach(hint => {
+    hint.addEventListener('click', () => {
+      taskInput.value = hint.dataset.text;
+      taskInput.focus();
+    });
+  });
+
+  // ============================================================
+  // 5. CONFIG PANEL (optional external API)
+  // ============================================================
+  const configToggle = document.getElementById('configToggle');
+  const configPanel = document.getElementById('configPanel');
+  const modeLocal = document.getElementById('modeLocal');
+  const modeApi = document.getElementById('modeApi');
+  const apiFields = document.getElementById('apiFields');
+
+  configToggle.addEventListener('click', () => {
+    configToggle.classList.toggle('open');
+    configPanel.classList.toggle('open');
+  });
+
+  modeLocal.addEventListener('click', () => {
+    aiMode = 'local';
+    modeLocal.classList.add('active');
+    modeApi.classList.remove('active');
+    apiFields.style.display = 'none';
+  });
+  modeApi.addEventListener('click', () => {
+    aiMode = 'api';
+    modeApi.classList.add('active');
+    modeLocal.classList.remove('active');
+    apiFields.style.display = 'block';
+  });
+
+  document.getElementById('saveApiConfig').addEventListener('click', () => {
+    apiConfig.endpoint = document.getElementById('apiEndpoint').value.trim();
+    apiConfig.key = document.getElementById('apiKey').value.trim();
+    if(!apiConfig.endpoint || !apiConfig.key){
+      showToast('Preencha o endpoint e a chave para usar a API externa.');
+      return;
+    }
+    showToast('Configuração salva para esta sessão. As próximas tarefas usarão a API externa.');
+  });
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  renderCalendar();
+  renderDayPanel();
+})();
+</script>
+
+</body>
+</html>

@@ -1,5 +1,7 @@
 # 🚀 API de Tarefas Inteligentes
 
+https://benjaminreiis.github.io/smart-task-api/
+
 Uma API REST para gerenciamento de tarefas desenvolvida com foco em boas práticas de backend.
 
 Este projeto simula um sistema simples de produtividade onde usuários podem criar, visualizar, atualizar e remover tarefas através de requisições HTTP.
